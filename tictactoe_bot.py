@@ -30,9 +30,10 @@ class TicTacToeBot:
             
             print("ChromeDriver initialized successfully!")
             self.board = [['' for _ in range(3)] for _ in range(3)]
-            self.wait = WebDriverWait(self.driver, 10)
+            self.wait = WebDriverWait(self.driver, 5)  # Reduced wait time from 10 to 5 seconds
             self.is_x_player = True
             self.last_board_state = None
+            self.stats = {'wins': 0, 'losses': 0, 'ties': 0}  # Track game statistics
             
         except Exception as e:
             print(f"Error initializing Chrome: {str(e)}")
@@ -58,7 +59,7 @@ class TicTacToeBot:
         try:
             print("Navigating to the game...")
             self.driver.get("https://playtictactoe.org/")
-            time.sleep(3)  # Wait for initial load
+            time.sleep(1)  # Reduced from 3 to 1 second
             
             print("Waiting for game board...")
             # First try to find any clickable cell
@@ -92,7 +93,7 @@ class TicTacToeBot:
                         # Try moving to element and clicking
                         self.actions.move_to_element(center_cell).click().perform()
                 
-                time.sleep(1)  # Wait for move to register
+                time.sleep(0.3)  # Reduced from 1 to 0.3 seconds
                 print("First move made!")
                 
                 # Get initial board state
@@ -603,7 +604,7 @@ class TicTacToeBot:
         moves_made = 0
         last_move_time = time.time()
         no_change_count = 0
-        max_no_change = 10  # Maximum number of checks without board changes
+        max_no_change = 5  # Reduced from 10 to 5
         last_piece_counts = None
         
         while game_active and retry_count < max_retries and moves_made < 9:
@@ -615,12 +616,24 @@ class TicTacToeBot:
                 if not new_state:
                     print("Error getting board state")
                     retry_count += 1
-                    time.sleep(1)
+                    time.sleep(0.2)  # Reduced from 1 to 0.2
                     continue
                 
                 # Check if game is over
                 if self.is_game_over():
                     print("Game is over!")
+                    # Update statistics
+                    winner = self.check_winner()
+                    if winner == 'tie':
+                        self.stats['ties'] += 1
+                        print("Game ended in a tie!")
+                    elif (winner == 'X' and self.is_x_player) or (winner == 'O' and not self.is_x_player):
+                        self.stats['wins'] += 1
+                        print("We won!")
+                    else:
+                        self.stats['losses'] += 1
+                        print("We lost!")
+                    print(f"Stats - Wins: {self.stats['wins']}, Losses: {self.stats['losses']}, Ties: {self.stats['ties']}")
                     break
                 
                 # Get current piece counts
@@ -661,7 +674,7 @@ class TicTacToeBot:
                         if self.make_move(*best_move):
                             moves_made += 1
                             last_move_time = time.time()
-                            time.sleep(0.5)
+                            time.sleep(0.2)  # Reduced from 0.5 to 0.2
                             self.last_board_state = self.get_board_state()
                             print(f"Move {moves_made} completed")
                             retry_count = 0
@@ -675,11 +688,11 @@ class TicTacToeBot:
                 else:
                     print("Waiting for opponent's move...")
                 
-                # Adaptive polling interval
-                if time_since_last_move < 2:
-                    time.sleep(0.2)
+                # Adaptive polling interval - reduced times
+                if time_since_last_move < 1:  # Reduced from 2 to 1
+                    time.sleep(0.1)  # Reduced from 0.2 to 0.1
                 else:
-                    time.sleep(0.5)
+                    time.sleep(0.2)  # Reduced from 0.5 to 0.2
                 
             except WebDriverException as e:
                 print(f"Browser error in game loop: {str(e)}")
@@ -693,13 +706,14 @@ class TicTacToeBot:
             print("Game completed normally")
         elif moves_made >= 9:
             print("Game ended - maximum moves reached")
+            self.stats['ties'] += 1
         elif retry_count >= max_retries:
             print("Game ended - maximum retries reached")
         elif no_change_count >= max_no_change:
             print("Game ended - no changes detected")
         
         # Wait for any end-game animations
-        time.sleep(2)
+        time.sleep(0.5)  # Reduced from 2 to 0.5
 
     def close(self):
         """Clean up resources."""
@@ -711,15 +725,18 @@ class TicTacToeBot:
             pass
 
 if __name__ == "__main__":
-    print("Starting Tic-tac-toe Bot (X player)...")
+    print("Starting Tic-tac-toe Bot (X/O player)...")
     bot = None
     try:
         bot = TicTacToeBot()
-        bot.play_multiple_games(5)  # Play 5 games by default
+        bot.play_multiple_games(100)  # Changed from 5 to 100 games
     except KeyboardInterrupt:
         print("\nBot stopped by user")
+        if bot:
+            print(f"\nFinal Stats - Wins: {bot.stats['wins']}, Losses: {bot.stats['losses']}, Ties: {bot.stats['ties']}")
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
     finally:
         if bot:
+            print(f"\nFinal Stats - Wins: {bot.stats['wins']}, Losses: {bot.stats['losses']}, Ties: {bot.stats['ties']}")
             bot.close() 
